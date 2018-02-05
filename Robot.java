@@ -36,8 +36,9 @@ public class Robot extends IterativeRobot {
 	private Talon armRight = new Talon(4); // right arm wheels
 	private Talon armLeft = new Talon(5); // left arm wheels
 	private DoubleSolenoid armPiston = new DoubleSolenoid(1, 2); // pneumatics for opening and closing arms
-	
-	
+	// variables
+	double botSpeedY = driveStick.getY();
+	double botSpeedX = driveStick.getTwist();
 
 	/**
 	 * This function is run when the robot is first started up and should be
@@ -82,7 +83,18 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
-		m_robotDrive.arcadeDrive(driveStick.getY(), driveStick.getTwist()); // driving and shit
+		/**
+		 * Drive controls
+		 */
+		// normal driving
+		m_robotDrive.arcadeDrive(botSpeedY, botSpeedX);
+		
+		// clutch
+		if(driveStick.getTrigger() == true) {
+			botSpeedY = (driveStick.getY() / 2); // half speed
+			botSpeedX = (driveStick.getTwist() / 2); // half turning speed
+		}
+		
 		
 		/**
 		 * Lift controls
