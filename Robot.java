@@ -23,21 +23,30 @@ import edu.wpi.first.wpilibj.drive.DifferentialDrive;
  * creating this project, you must also update the manifest file in the resource
  * directory.
  */
+//@SuppressWarnings("deprecation")
 public class Robot extends IterativeRobot {
-	private DifferentialDrive m_robotDrive
-			= new DifferentialDrive(new Spark(0), new Spark(1));
 	private Timer m_timer = new Timer();
 	// joysticks
+	
 	private Joystick driveStick = new Joystick(0); // 
 	private Joystick fightStick = new Joystick(1);
 	// motors & pnuematics. We're not sure we're using talons, may change later. Orientation is based standing behind the robot.
+	private Talon wheelsRight = new Talon(0);
+	private Talon wheelsLeft = new Talon(1);
 	private Talon liftRight = new Talon(2); // right lift motor
 	private Talon liftLeft = new Talon(3); // left lift motor
 	private Talon armRight = new Talon(4); // right arm wheels
 	private Talon armLeft = new Talon(5); // left arm wheels
 	private DoubleSolenoid armPiston = new DoubleSolenoid(1, 2); // pneumatics for opening and closing arms
+	// variables
+	double botSpeedY = driveStick.getY();
+	double botSpeedTwist = driveStick.getTwist();
+	// arm rig variables
 	
-	
+	DifferentialDrive m_DifferentialDrive;// = new DifferentialDrive(wheelsLeft, wheelsRight);
+	boolean armPos = false;
+	boolean previousButton = false;
+	boolean currentButton = false;
 
 	/**
 	 * This function is run when the robot is first started up and should be
@@ -45,7 +54,8 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void robotInit() {
-		
+		m_DifferentialDrive = new DifferentialDrive(wheelsLeft, wheelsRight);
+		m_DifferentialDrive.setExpiration(0.1);
 	}
 		
 	/**
@@ -64,9 +74,9 @@ public class Robot extends IterativeRobot {
 	public void autonomousPeriodic() {
 		// Drive for 2 seconds
 		if(m_timer.get() < 2.0) {
-			m_robotDrive.arcadeDrive(0.5, 0.0); // drive forwards half speed
+			m_DifferentialDrive.arcadeDrive(0.5, 0.0); // drive forwards half speed
 		} else {
-			m_robotDrive.stopMotor(); // stop robot
+			m_DifferentialDrive.stopMotor(); // stop robot
 		}
 	}
 
@@ -82,7 +92,20 @@ public class Robot extends IterativeRobot {
 	 */
 	@Override
 	public void teleopPeriodic() {
-		m_robotDrive.arcadeDrive(driveStick.getY(), driveStick.getTwist()); // driving and shit
+		/**
+		 * Drive controls
+		 */
+		m_DifferentialDrive.setSafetyEnabled(false);
+		if(driveStick.getTrigger() == true) {
+			botSpeedY = (driveStick.getY() / 2); // half speed
+			botSpeedTwist = (driveStick.getTwist() / 2); // half turning speed
+		}
+		// normal driving
+		m_DifferentialDrive.arcadeDrive(botSpeedTwist, botSpeedY);
+		
+		// clutch
+	
+		
 		
 		/**
 		 * Lift controls
@@ -103,25 +126,14 @@ public class Robot extends IterativeRobot {
 		 * Arm controls
 		 */
 		// toggle arms. armPos false = arms open, armPos true = arms closed
-		boolean armPos = false;
-		if(fightStick.getRawButton(1) == true) {
-			if(armPos == false){
-				armPos = true;
-				Timer.delay(0.5); // prevent jam
-			}
-			if(fightStick.getRawButton(1) == true) {
-				if(armPos == true){
-					armPos = false;
-					Timer.delay(0.5); // prevent jam
-				}
-			}
+		previousButton = currentButton; // reset values
+		currentButton = fightStick.getRawButton(1); // detect input
+		if(currentButton && !previousButton) { // detect change in value
+			armPos = !armPos; // swap value of armPos
 		}
-		if(armPos = false) { // arms open
-			armPiston.set(DoubleSolenoid.Value.kReverse);
-		}
-		if(armPos = true) { // arms closed
-			armPiston.set(DoubleSolenoid.Value.kForward);
-		}
+		
+		armPiston.set(armPos ? (DoubleSolenoid.Value.kForward) : (DoubleSolenoid.Value.kReverse)); // check value of armPos and act accordingly
+
 		// eject cube
 		if(fightStick.getRawButton(2) == true) {
 			armRight.set(1);
@@ -145,6 +157,7 @@ public class Robot extends IterativeRobot {
 		if(fightStick.getRawButton(5) == true) { // small button to right of big red
 			// utilize climb mechanism
 		}
+	Timer.delay(.05);
 	} 
 		
 
